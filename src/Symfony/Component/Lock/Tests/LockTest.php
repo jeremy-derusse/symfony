@@ -11,6 +11,7 @@
 
 namespace Symfony\Component\Lock\Tests;
 
+use Symfony\Component\Lock\Exception\LockConflictedException;
 use Symfony\Component\Lock\Key;
 use Symfony\Component\Lock\Lock;
 use Symfony\Component\Lock\StoreInterface;
@@ -30,7 +31,21 @@ class LockTest extends \PHPUnit_Framework_TestCase
             ->expects($this->once())
             ->method('save');
 
-        $lock->acquire(false);
+        $this->assertTrue($lock->acquire(false));
+    }
+
+    public function testAcquireReturnsFalse()
+    {
+        $key = new Key(uniqid(__METHOD__, true));
+        $store = $this->getMockBuilder(StoreInterface::class)->getMock();
+        $lock = new Lock($key, $store);
+
+        $store
+            ->expects($this->once())
+            ->method('save')
+            ->willThrowException(new LockConflictedException());
+
+        $this->assertFalse($lock->acquire(false));
     }
 
     public function testAcquireBlocking()
@@ -46,7 +61,7 @@ class LockTest extends \PHPUnit_Framework_TestCase
             ->expects($this->once())
             ->method('waitAndSave');
 
-        $lock->acquire(true);
+        $this->assertTrue($lock->acquire(true));
     }
 
     public function testAcquireSetsTtl()

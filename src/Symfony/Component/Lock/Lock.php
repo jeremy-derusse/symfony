@@ -63,9 +63,16 @@ final class Lock implements LockInterface, LoggerAwareInterface
             if ($this->ttl) {
                 $this->refresh();
             }
+
+            return true;
         } catch (LockConflictedException $e) {
             $this->logger->warning('Failed to lock the "{resource}". Someone else already acquired the lock', array('resource' => $this->key));
-            throw $e;
+
+            if ($blocking) {
+                throw $e;
+            }
+            
+            return false;
         } catch (\Exception $e) {
             $this->logger->warning('Failed to lock the "{resource}"', array('resource' => $this->key, 'exception' => $e));
             throw new LockAcquiringException('', 0, $e);
