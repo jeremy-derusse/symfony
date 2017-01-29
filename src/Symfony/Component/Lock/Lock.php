@@ -119,5 +119,7 @@ final class Lock implements LockInterface, LoggerAwareInterface
             $this->logger->warning('Failed to release the "{resource}" lock', array('resource' => $this->key));
             throw new LockReleasingException();
         }
+
+        $this->logger->info('Lock successfully released for "{resource}"', array('resource' => $this->key));
     }
 }
