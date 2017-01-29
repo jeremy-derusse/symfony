@@ -18,6 +18,8 @@ use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Form\Form;
+use Symfony\Component\Lock\Lock;
+use Symfony\Component\Lock\Store\SemaphoreStore;
 use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Translation\Translator;
 use Symfony\Component\Validator\Validation;
@@ -124,6 +126,7 @@ class Configuration implements ConfigurationInterface
         $this->addPropertyInfoSection($rootNode);
         $this->addCacheSection($rootNode);
         $this->addPhpErrorsSection($rootNode);
+        $this->addLockSection($rootNode);
 
         return $treeBuilder;
     }
@@ -779,6 +782,50 @@ class Configuration implements ConfigurationInterface
                             ->info('Throw PHP errors as \ErrorException instances.')
                             ->defaultValue($this->debug)
                             ->treatNullLike($this->debug)
+                        ->end()
+                    ->end()
+                ->end()
+            ->end()
+        ;
+    }
+
+    private function addLockSection(ArrayNodeDefinition $rootNode)
+    {
+        $rootNode
+            ->children()
+                ->arrayNode('lock')
+                    ->info('Lock configuration')
+                    ->canBeEnabled()
+                    ->children()
+                        ->arrayNode('flock')
+                            ->canBeDisabled()
+                        ->end()
+                        ->arrayNode('semaphore')
+                            ->{class_exists(SemaphoreStore::class) && SemaphoreStore::isSupported() ? 'canBeDisabled' : 'canBeEnabled'}()
+                        ->end()
+                        ->arrayNode('memcached')
+                            ->canBeEnabled()
+                            ->children()
+                                ->arrayNode('hosts')
+                                    ->beforeNormalization()
+                                        ->ifTrue(function ($v) { return !is_array($v) && null !== $v; })
+                                        ->then(function ($v) { return is_bool($v) ? array() : preg_split('/\s*,\s*/', $v); })
+                                    ->end()
+                                    ->prototype('scalar')->end()
+                                ->end()
+                            ->end()
+                        ->end()
+                        ->arrayNode('redis')
+                            ->canBeEnabled()
+                            ->children()
+                                ->arrayNode('hosts')
+                                    ->beforeNormalization()
+                                        ->ifTrue(function ($v) { return !is_array($v) && null !== $v; })
+                                        ->then(function ($v) { return is_bool($v) ? array() : preg_split('/\s*,\s*/', $v); })
+                                    ->end()
+                                    ->prototype('scalar')->end()
+                                ->end()
+                            ->end()
                         ->end()
                     ->end()
                 ->end()
