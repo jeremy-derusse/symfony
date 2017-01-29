@@ -24,24 +24,24 @@ use Symfony\Component\Lock\StoreInterface;
 class RedisStore implements StoreInterface
 {
     private $redis;
-    private $defaultTtl;
+    private $initialTtl;
 
     /**
      * @param \Redis|\RedisArray|\RedisCluster|\Predis\Client $redisClient
-     * @param float                                           $defaultTtl  the default expiration delay of locks in seconds
+     * @param float                                           $initialTtl the expiration delay of locks in seconds
      */
-    public function __construct($redisClient, $defaultTtl = 300.0)
+    public function __construct($redisClient, $initialTtl = 300.0)
     {
         if (!$redisClient instanceof \Redis && !$redisClient instanceof \RedisArray && !$redisClient instanceof \RedisCluster && !$redisClient instanceof \Predis\Client) {
             throw new InvalidArgumentException(sprintf('%s() expects parameter 1 to be Redis, RedisArray, RedisCluster or Predis\Client, %s given', __METHOD__, is_object($redisClient) ? get_class($redisClient) : gettype($redisClient)));
         }
 
-        if ($defaultTtl <= 0) {
-            throw new InvalidArgumentException(sprintf('%s() expects a strictly positive TTL. Got %d.', __METHOD__, $defaultTtl));
+        if ($initialTtl <= 0) {
+            throw new InvalidArgumentException(sprintf('%s() expects a strictly positive TTL. Got %d.', __METHOD__, $initialTtl));
         }
 
         $this->redis = $redisClient;
-        $this->defaultTtl = $defaultTtl;
+        $this->initialTtl = $initialTtl;
     }
 
     /**
@@ -57,7 +57,7 @@ class RedisStore implements StoreInterface
             end
         ';
 
-        $expire = (int) ceil($this->defaultTtl * 1000);
+        $expire = (int) ceil($this->initialTtl * 1000);
         if (!$this->evaluate($script, (string) $key, array($this->getToken($key), $expire))) {
             throw new LockConflictedException();
         }

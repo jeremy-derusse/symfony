@@ -11,6 +11,7 @@
 
 namespace Symfony\Component\Lock\Store;
 
+use Symfony\Component\Lock\Exception\InvalidArgumentException;
 use Symfony\Component\Lock\Exception\LockConflictedException;
 use Symfony\Component\Lock\Exception\NotSupportedException;
 use Symfony\Component\Lock\Key;
@@ -23,6 +24,18 @@ use Symfony\Component\Lock\StoreInterface;
  */
 class SemaphoreStore implements StoreInterface
 {
+    public static function isSupported()
+    {
+        return extension_loaded('sysvsem');
+    }
+
+    public function __construct()
+    {
+        if (!static::isSupported()) {
+            throw new InvalidArgumentException('Semaphore extension (sysvsem) is required');
+        }
+    }
+
     /**
      * {@inheritdoc}
      */

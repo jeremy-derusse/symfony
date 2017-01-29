@@ -24,22 +24,31 @@ use Symfony\Component\Lock\StoreInterface;
 class MemcachedStore implements StoreInterface
 {
     private $memcached;
-    private $defaultTtl;
+    private $initialTtl;
     /** @var bool */
     private $useExtendedReturn;
 
+    public static function isSupported()
+    {
+        return extension_loaded('memcached');
+    }
+
     /**
      * @param \Memcached $memcached
-     * @param int        $defaultTtl the default expiration delay of locks in seconds
+     * @param int        $initialTtl the expiration delay of locks in seconds
      */
-    public function __construct(\Memcached $memcached, $defaultTtl = 300)
+    public function __construct(\Memcached $memcached, $initialTtl = 300)
     {
-        if ($defaultTtl < 1) {
-            throw new InvalidArgumentException(sprintf('%s() expects a strictly positive TTL. Got %d.', __METHOD__, $defaultTtl));
+        if (!static::isSupported()) {
+            throw new InvalidArgumentException('Memcached extension is required');
+        }
+
+        if ($initialTtl < 1) {
+            throw new InvalidArgumentException(sprintf('%s() expects a strictly positive TTL. Got %d.', __METHOD__, $initialTtl));
         }
 
         $this->memcached = $memcached;
-        $this->defaultTtl = $defaultTtl;
+        $this->initialTtl = $initialTtl;
     }
 
     /**
@@ -49,12 +58,12 @@ class MemcachedStore implements StoreInterface
     {
         $token = $this->getToken($key);
 
-        if ($this->memcached->add((string) $key, $token, (int) ceil($this->defaultTtl))) {
+        if ($this->memcached->add((string) $key, $token, (int) ceil($this->initialTtl))) {
             return;
         }
 
         // the lock is already acquire. It could be us. Let's try to put off.
-        $this->putOffExpiration($key, $this->defaultTtl);
+        $this->putOffExpiration($key, $this->initialTtl);
     }
 
     public function waitAndSave(Key $key)
