@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+6.2
+---
+
+ * Add `#[MapEntity]` with its corresponding `EntityArgumentResolver`
+
 6.0
 ---
 
